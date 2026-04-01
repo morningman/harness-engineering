@@ -1,0 +1,54 @@
+# Doris 代码质量评估标准
+
+criteria:
+  architecture_alignment:
+    description: "代码修改符合 Doris 现有架构模式"
+    weight: 0.15
+    threshold: 7
+    checks:
+      - id: pattern_consistency
+        name: "遵循现有设计模式"
+        details:
+          - "FE: 遵循 Visitor/Rewrite 模式（如涉及 Planner）"
+          - "BE: 遵循 Pipeline/Operator 模式（如涉及执行器）"
+          - "Connector: 遵循 JniScanner/JniWriter 模式"
+        scoring: "完全一致: 10, 轻微偏差: 7, 不一致: 3"
+      - id: correct_location
+        name: "新增类放在正确的包/目录下"
+        scoring: "位置正确: 10, 基本合理: 7, 不合理: 3"
+      - id: module_boundary
+        name: "模块边界清晰，无循环依赖"
+        scoring: "无跨模块依赖: 10, 有但合理: 7, 循环依赖: 0"
+
+  code_style:
+    description: "代码风格一致性"
+    weight: 0.05
+    threshold: 6
+    checks:
+      - id: naming
+        name: "命名规范一致"
+        details: "FE: camelCase, BE: snake_case"
+        scoring: "一致: 10, 少量偏差: 7, 不一致: 3"
+      - id: documentation
+        name: "注释充分"
+        details: "公共类/方法有 JavaDoc/Doxygen"
+        scoring: "完整: 10, 部分: 6, 无: 3"
+      - id: no_duplication
+        name: "无不必要的代码复制"
+        scoring: "无重复: 10, 少量: 7, 明显复制粘贴: 3"
+
+  error_handling:
+    description: "错误处理完善"
+    weight: 0.10
+    threshold: 7
+    checks:
+      - id: no_swallowing
+        name: "异常有恰当的捕获和处理（不吞异常）"
+        scoring: "完善: 10, catch 后仅 log: 6, 空 catch: 0"
+      - id: user_friendly
+        name: "错误信息对用户友好且可定位问题"
+        scoring: "包含原因和建议: 10, 仅原因: 7, 通用: 4"
+      - id: resource_safety
+        name: "资源泄露防护"
+        details: "Java: try-with-resources, C++: RAII"
+        scoring: "完善: 10, 手动管理但正确: 7, 有泄漏风险: 2"

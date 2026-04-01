@@ -1,0 +1,50 @@
+# Doris 代码正确性评估标准
+
+criteria:
+  compilation:
+    description: "代码修改后能正确编译"
+    weight: 0.30
+    threshold: 10  # 硬性门槛，不可通融
+    checks:
+      - id: fe_compile
+        name: "FE 编译通过"
+        command: "cd fe && mvn package -pl fe-core -DskipTests"
+        pass_condition: "输出包含 BUILD SUCCESS"
+      - id: be_compile
+        name: "BE 编译通过（如涉及 BE 修改）"
+        command: "cd be && ./build.sh --be"
+        pass_condition: "编译无错误退出"
+      - id: no_new_warnings
+        name: "无新增编译警告"
+        pass_condition: "编译输出中无新增 warning"
+
+  unit_tests:
+    description: "单元测试全部通过，新增代码有测试覆盖"
+    weight: 0.25
+    threshold: 8
+    checks:
+      - id: no_regression
+        name: "现有单测无回归"
+        pass_condition: "所有原有测试仍通过"
+        scoring: "全部通过: 10, 有新失败: 0"
+      - id: new_coverage
+        name: "新增/修改的公共方法有对应单元测试"
+        scoring: "覆盖率 >80%: 10, >60%: 8, >40%: 6, <40%: 4"
+      - id: boundary_tests
+        name: "边界条件和异常路径有测试"
+        scoring: "充分: 10, 部分: 7, 无: 4"
+
+  api_compatibility:
+    description: "对外接口保持兼容"
+    weight: 0.15
+    threshold: 8
+    checks:
+      - id: sql_compat
+        name: "SQL 语法向后兼容"
+        scoring: "完全兼容: 10, 有 deprecation: 8, breaking: 0"
+      - id: config_compat
+        name: "新增配置有合理默认值"
+        scoring: "有默认值: 10, 必须手动配置: 4"
+      - id: api_compat
+        name: "HTTP/Thrift/gRPC 接口兼容"
+        scoring: "无 breaking change: 10, 仅新增: 8, 修改已有: 2"

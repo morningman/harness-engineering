@@ -1,0 +1,103 @@
+# Doris 特有模式检查
+
+# 这些是 Doris 项目特有的代码模式和约定
+# Evaluator 在评估时应检查这些模式是否被正确遵循
+
+patterns:
+
+  # ====================== FE 模式 ======================
+  fe_patterns:
+    nereids_optimizer:
+      description: "新的查询优化功能应在 Nereids 优化器中实现"
+      applies_to: "涉及查询优化/计划生成的修改"
+      check: "新增的 Rule/Plan 类是否在 nereids 包下"
+      violation_severity: "high"
+
+    catalog_properties:
+      description: "Catalog 新增属性必须有默认值"
+      applies_to: "涉及 Catalog 属性的修改"
+      check: "新增 Property 是否在构造函数中设置了默认值"
+      violation_severity: "critical"
+
+    exception_hierarchy:
+      description: "使用正确的异常类型层次"
+      applies_to: "所有 FE 修改"
+      check: |
+        - 语义分析错误: AnalysisException
+        - DDL 操作错误: DdlException
+        - 用户操作错误: UserException
+        - 内部错误: 不应暴露给用户
+      violation_severity: "medium"
+
+    visitor_pattern:
+      description: "Planner 相关修改使用 Visitor 模式"
+      applies_to: "涉及 Plan Node 遍历/转换的修改"
+      check: "是否通过 Visitor 而非 instanceof 实现分派"
+      violation_severity: "medium"
+
+  # ====================== BE 模式 ======================
+  be_patterns:
+    status_return:
+      description: "使用 Status 作为错误返回值"
+      applies_to: "所有 BE 修改"
+      check: "函数返回 Status 而非抛异常"
+      violation_severity: "high"
+
+    pipeline_operator:
+      description: "执行算子遵循 Pipeline Operator 模式"
+      applies_to: "涉及执行引擎的修改"
+      check: "Operator 实现 prepare/open/get_block/close 生命周期"
+      violation_severity: "high"
+
+    memory_tracker:
+      description: "内存分配使用 MemTracker 追踪"
+      applies_to: "涉及内存分配的修改"
+      check: "大块内存分配通过 MemTracker 注册"
+      violation_severity: "medium"
+
+    vectorized_processing:
+      description: "数据处理使用向量化（列式）方式"
+      applies_to: "涉及数据处理的修改"
+      check: "处理 Block/Column 而非逐行处理"
+      violation_severity: "medium"
+
+  # ====================== Connector 模式 ======================
+  connector_patterns:
+    jni_scanner:
+      description: "外部数据源读取使用 JniScanner 模式"
+      applies_to: "涉及外部数据源 Reader 的修改"
+      check: |
+        - Java 侧: 继承/实现 JniScanner 接口
+        - 实现 open/getNext/close 生命周期
+        - BE 侧: 通过 VJniScanNode 调用
+      violation_severity: "high"
+
+    jni_writer:
+      description: "外部数据源写入使用 JniWriter 模式"
+      applies_to: "涉及外部数据源 Writer 的修改"
+      check: |
+        - Java 侧: 继承/实现 JniWriter 接口
+        - 使用 VJniFormatTransformer 进行格式转换
+      violation_severity: "high"
+
+    type_mapping:
+      description: "数据类型映射要完整覆盖"
+      applies_to: "涉及外部数据源类型映射的修改"
+      check: |
+        必须覆盖的类型:
+        - 基本类型: BOOLEAN, TINYINT, SMALLINT, INT, BIGINT, FLOAT, DOUBLE
+        - 字符串: STRING, VARCHAR, CHAR
+        - 时间: DATE, DATETIME, TIMESTAMP
+        - 精确数值: DECIMAL
+        - 复杂类型: ARRAY, MAP, STRUCT (如数据源支持)
+      violation_severity: "high"
+
+    connection_error_handling:
+      description: "连接错误有清晰分类"
+      applies_to: "涉及外部数据源连接的修改"
+      check: |
+        错误分类:
+        - 连接超时 vs 认证失败 vs 权限不足
+        - 错误信息包含连接目标地址
+        - 有合理的重试机制（如适用）
+      violation_severity: "medium"
